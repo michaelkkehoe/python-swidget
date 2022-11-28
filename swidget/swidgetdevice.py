@@ -1,10 +1,10 @@
 import json
 import logging
 import time
-
-from aiohttp import ClientSession, TCPConnector
 from enum import Enum
 from typing import Dict, List, Set
+
+from aiohttp import ClientSession, TCPConnector
 
 from .exceptions import SwidgetException
 from .websocket import SwidgetWebsocket
@@ -39,8 +39,8 @@ class SwidgetDevice:
                 host=self.ip_address,
                 secret_key=self.secret_key,
                 callback=self.message_callback,
-                session=self._session)
-
+                session=self._session,
+            )
 
     def stop(self):
         """Stop the websocket."""
@@ -51,7 +51,11 @@ class SwidgetDevice:
         """Entrypoint for a websocket callback"""
         if message["request_id"] == "summary":
             await self.process_summary(message)
-        elif message["request_id"] == "state" or message["request_id"] == "DYNAMIC_UPDATE" or message["request_id"] == "command":
+        elif (
+            message["request_id"] == "state"
+            or message["request_id"] == "DYNAMIC_UPDATE"
+            or message["request_id"] == "command"
+        ):
             await self.process_state(message)
 
     async def get_summary(self):
@@ -63,7 +67,7 @@ class SwidgetDevice:
         await self.process_summary(summary)
 
     async def process_summary(self, summary):
-        """ Process the data around the summary of the device"""
+        """Process the data around the summary of the device"""
         self.model = summary["model"]
         self.mac_address = summary["mac"]
         self.version = summary["version"]
@@ -71,13 +75,13 @@ class SwidgetDevice:
             "host": SwidgetAssembly(summary["host"]),
             "insert": SwidgetAssembly(summary["insert"]),
         }
-        self.device_type = self.assemblies['host'].type
-        self.insert_type = self.assemblies['insert'].type
-        self.id = self.assemblies['host'].id
+        self.device_type = self.assemblies["host"].type
+        self.insert_type = self.assemblies["insert"].type
+        self.id = self.assemblies["host"].id
         self._last_update = int(time.time())
 
     async def get_state(self):
-        """ Get the state of the device over HTTP"""
+        """Get the state of the device over HTTP"""
         async with self._session.get(
             url=f"https://{self.ip_address}/api/v1/state", ssl=self.ssl
         ) as response:
@@ -85,7 +89,7 @@ class SwidgetDevice:
         await self.process_state(state)
 
     async def process_state(self, state):
-        """ Process any information about the state of the device or insert"""
+        """Process any information about the state of the device or insert"""
         _LOGGER.debug(f"Processing state: {state}")
         # State is not always in the state (during callback)
         try:
@@ -108,7 +112,7 @@ class SwidgetDevice:
         await self.get_state()
 
     async def send_config(self, payload: dict):
-        data = json.dumps({"type":"config","request_id":"abcd", "payload": payload})
+        data = json.dumps({"type": "config", "request_id": "abcd", "payload": payload})
         await self._websocket.send_str(data)
 
     async def send_command(
@@ -118,10 +122,9 @@ class SwidgetDevice:
         data = {assembly: {"components": {component: {function: command}}}}
 
         if self.use_websockets:
-            data = json.dumps({"type": "command",
-                               "request_id": "command",
-                               "payload": data
-                               })
+            data = json.dumps(
+                {"type": "command", "request_id": "command", "payload": data}
+            )
             _LOGGER.debug(f"About to send data: {data}")
             await self._websocket.send_str(data)
         else:
@@ -142,8 +145,7 @@ class SwidgetDevice:
         """
         try:
             async with self._session.get(
-                url=f"https://{self.ip_address}/ping",
-                ssl=self.ssl
+                url=f"https://{self.ip_address}/ping", ssl=self.ssl
             ) as response:
                 return response.text
         except:
@@ -157,7 +159,7 @@ class SwidgetDevice:
         try:
             async with self._session.get(
                 url=f"https://{self.ip_address}/blink?x-user-key=dqMMBX9deuwtkkp784ewTjqo76IYfThV",
-                ssl=self.ssl
+                ssl=self.ssl,
             ) as response:
                 return response.text
         except:
@@ -179,26 +181,32 @@ class SwidgetDevice:
             "insert_type": self.insert_type,
             "insert_features": self.insert_features,
             "host_features": self.host_features,
-            "rssi": self.rssi
+            "rssi": self.rssi,
         }
 
     def get_child_consumption(self, plug_id=0):
         """Get the power consumption of a plug in watts."""
         if plug_id == "all":
             return_dict = {}
-            for id, properties in self.assemblies['host'].components.items():
+            for id, properties in self.assemblies["host"].components.items():
                 try:
-                    return_dict[f"power_{id}"] = properties.functions['power']['current']
-                except KeyError: # Hits this when there is no power metering
+                    return_dict[f"power_{id}"] = properties.functions["power"][
+                        "current"
+                    ]
+                except KeyError:  # Hits this when there is no power metering
                     return None
             return return_dict
-        return self.assemblies['host'].components[str(plug_id)].functions['power']['current']
+        return (
+            self.assemblies["host"]
+            .components[str(plug_id)]
+            .functions["power"]["current"]
+        )
 
     async def total_consumption(self):
         """Get the total power consumption in watts."""
         total_consumption = 0
-        for id, properties in self.assemblies['host'].components.items():
-            total_consumption += properties.functions['power']['current']
+        for id, properties in self.assemblies["host"].components.items():
+            total_consumption += properties.functions["power"]["current"]
         return total_consumption
 
     @property
@@ -211,7 +219,7 @@ class SwidgetDevice:
         return_dict = {}
         for feature in self.insert_features:
             return_dict.update(self.get_function_values(feature))
-        return_dict.update({'rssi': self.rssi})
+        return_dict.update({"rssi": self.rssi})
         power_values = self.get_child_consumption("all")
         if power_values:
             return_dict.update(power_values)
@@ -221,7 +229,7 @@ class SwidgetDevice:
     def host_features(self) -> List[str]:
         """Return a set of features that the host supports."""
         try:
-            return list(self.assemblies['host'].components['0'].functions.keys())
+            return list(self.assemblies["host"].components["0"].functions.keys())
         except KeyError:
             _LOGGER.debug("Host does not have feature information")
             return set()
@@ -230,7 +238,7 @@ class SwidgetDevice:
     def insert_features(self) -> List[str]:
         """Return a set of features that the insert supports."""
         try:
-            return list(self.assemblies['insert'].components.keys())
+            return list(self.assemblies["insert"].components.keys())
         except KeyError:
             _LOGGER.debug("Insert does not have feature information")
             return set()
@@ -238,21 +246,29 @@ class SwidgetDevice:
     def get_function_values(self, function: str):
         """Return the values of an insert function."""
         return_values = dict()
-        for function, data in self.assemblies['insert'].components[function].functions.items():
+        for function, data in (
+            self.assemblies["insert"].components[function].functions.items()
+        ):
             if function == "occupied":
-                return_values[function] = data['state']
+                return_values[function] = data["state"]
             elif function == "toggle":
                 pass
             else:
-                return_values[function] = data['now']
+                return_values[function] = data["now"]
         return return_values
 
     def get_sensor_value(self, function, sensor):
         """Return the value of a sensor given a function and sensor"""
         if sensor == "occupied":
-            return self.assemblies['insert'].components[function].functions['occupied']['state']
+            return (
+                self.assemblies["insert"]
+                .components[function]
+                .functions["occupied"]["state"]
+            )
         else:
-            return self.assemblies['insert'].components[function].functions[sensor]['now']
+            return (
+                self.assemblies["insert"].components[function].functions[sensor]["now"]
+            )
 
     @property
     def is_outlet(self) -> bool:
@@ -262,7 +278,11 @@ class SwidgetDevice:
     @property
     def is_switch(self) -> bool:
         """Return True if the device is a switch"""
-        return self.device_type == "switch" or self.device_type == "pana_switch" or self.device_type == "relay_switch"
+        return (
+            self.device_type == "switch"
+            or self.device_type == "pana_switch"
+            or self.device_type == "relay_switch"
+        )
 
     @property
     def is_pana_switch(self) -> bool:
@@ -287,7 +307,9 @@ class SwidgetDevice:
     @property  # type: ignore
     def is_on(self) -> bool:
         """Return whether device is on."""
-        dimmer_state = self.assemblies['host'].components["0"].functions['toggle']["state"]
+        dimmer_state = (
+            self.assemblies["host"].components["0"].functions["toggle"]["state"]
+        )
         if dimmer_state == "on":
             return True
         return False
@@ -297,6 +319,7 @@ class SwidgetDevice:
         await self.send_command(
             assembly="host", component="0", function="toggle", command={"state": "on"}
         )
+
     async def turn_off(self):
         """Turn the device off."""
         await self.send_command(
@@ -306,19 +329,27 @@ class SwidgetDevice:
     async def turn_on_usb_insert(self):
         """Turn the USB insert on."""
         await self.send_command(
-            assembly="insert", component="usb", function="toggle", command={"state": "on"}
+            assembly="insert",
+            component="usb",
+            function="toggle",
+            command={"state": "on"},
         )
 
     async def turn_off_usb_insert(self):
         """Turn the USB insert off."""
         await self.send_command(
-            assembly="insert", component="usb", function="toggle", command={"state": "off"}
+            assembly="insert",
+            component="usb",
+            function="toggle",
+            command={"state": "off"},
         )
 
     @property  # type: ignore
     def usb_is_on(self) -> bool:
         """Return whether USB is on."""
-        usb_state = self.assemblies['insert'].components["usb"].functions['toggle']["state"]
+        usb_state = (
+            self.assemblies["insert"].components["usb"].functions["toggle"]["state"]
+        )
         if usb_state == "on":
             return True
         return False

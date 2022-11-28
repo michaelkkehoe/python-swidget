@@ -8,20 +8,20 @@ from typing import cast
 import asyncclick as click
 
 from swidget import (
-    discover_devices,
-    discover_single,
     SwidgetDevice,
     SwidgetDimmer,
-    SwidgetSwitch,
     SwidgetOutlet,
-    SwidgetTimerSwitch
+    SwidgetSwitch,
+    SwidgetTimerSwitch,
+    discover_devices,
+    discover_single,
 )
 
 TYPE_TO_CLASS = {
     "dimmer": SwidgetDimmer,
     "switch": SwidgetSwitch,
     "outlet": SwidgetOutlet,
-    "pana_switch": SwidgetTimerSwitch
+    "pana_switch": SwidgetTimerSwitch,
 }
 
 click.anyio_backend = "asyncio"
@@ -43,10 +43,7 @@ pass_dev = click.make_pass_decorator(SwidgetDevice)
     required=False,
     help="The password of the device to connect to.",
 )
-@click.option("-d", "--debug",
-    envvar="SWIDGET_DEBUG",
-    default=False,
-    is_flag=True)
+@click.option("-d", "--debug", envvar="SWIDGET_DEBUG", default=False, is_flag=True)
 @click.option(
     "--type",
     envvar="SWIDGET_TYPE",
@@ -94,6 +91,7 @@ async def cli(ctx, host, password, debug, type):
 def wifi(dev):
     """Commands to control wifi settings."""
 
+
 @wifi.command()
 @click.argument("ssid")
 @click.option("--password", prompt=True, hide_input=True)
@@ -120,6 +118,7 @@ async def discover(ctx, timeout):
     devices = await discover_devices(timeout)
     for device in devices.values():
         click.echo(f"{device.host}[{device.mac}] - {device.friendly_name}")
+
 
 @cli.command()
 @pass_dev
@@ -161,11 +160,9 @@ async def state(dev: SwidgetDevice):
     for function in dev.host_features:
         click.echo(click.style(f"\t+ {function}", fg="green"))
 
-
     click.echo(click.style("\n\t== Insert Features ==", bold=True))
     for function in dev.insert_features:
         click.echo(click.style(f"\t+ {function}", fg="green"))
-
 
 
 @cli.command()
@@ -185,7 +182,6 @@ async def raw_command(dev: SwidgetDevice, assembly, component, function, command
 
     click.echo(res)
     return res
-
 
 
 @cli.command()

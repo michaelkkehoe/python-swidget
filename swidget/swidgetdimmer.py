@@ -1,19 +1,16 @@
 import logging
 
-from swidget.swidgetdevice import (
-    DeviceType,
-    SwidgetDevice
-)
 from swidget.exceptions import SwidgetException
-
-
+from swidget.swidgetdevice import DeviceType, SwidgetDevice
 
 log = logging.getLogger(__name__)
 
-class SwidgetDimmer(SwidgetDevice):
 
-    def __init__(self, host,  secret_key: str, ssl: bool, use_websockets: bool) -> None:
-        super().__init__(host=host, secret_key=secret_key, ssl=ssl, use_websockets=use_websockets)
+class SwidgetDimmer(SwidgetDevice):
+    def __init__(self, host, secret_key: str, ssl: bool, use_websockets: bool) -> None:
+        super().__init__(
+            host=host, secret_key=secret_key, ssl=ssl, use_websockets=use_websockets
+        )
         self._device_type = "dimmer"
 
     @property  # type: ignore
@@ -25,19 +22,25 @@ class SwidgetDimmer(SwidgetDevice):
         if not self.is_dimmable:
             raise SwidgetException("Device is not dimmable.")
         try:
-            return self.assemblies['host'].components["0"].functions["level"]["now"]
+            return self.assemblies["host"].components["0"].functions["level"]["now"]
         except KeyError:
-            return self.assemblies['host'].components["0"].functions["level"]["default"]
+            return self.assemblies["host"].components["0"].functions["level"]["default"]
 
     async def set_brightness(self, brightness):
         """Set the brightness of the device."""
         await self.send_command(
-            assembly="host", component="0", function="level", command={"now": brightness}
+            assembly="host",
+            component="0",
+            function="level",
+            command={"now": brightness},
         )
 
     async def set_default_brightness(self, brightness):
         await self.send_command(
-            assembly="host", component="0", function="level", command={"default": brightness}
+            assembly="host",
+            component="0",
+            function="level",
+            command={"default": brightness},
         )
 
     @property  # type: ignore

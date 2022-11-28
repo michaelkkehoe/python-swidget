@@ -1,7 +1,7 @@
 import asyncio
-from datetime import datetime
-import logging
 import json
+import logging
+from datetime import datetime
 
 import aiohttp
 
@@ -61,8 +61,10 @@ class SwidgetWebsocket:
         self.state = STATE_STARTING
 
         try:
-            headers = {'Connection': 'Upgrade'}
-            async with self.session.ws_connect(self.uri, headers=headers, verify_ssl=False) as self.ws_client:
+            headers = {"Connection": "Upgrade"}
+            async with self.session.ws_connect(
+                self.uri, headers=headers, verify_ssl=False
+            ) as self.ws_client:
                 self.state = STATE_CONNECTED
                 self.failed_attempts = 0
                 self.send_str(json.dumps({"type": "summary", "request_id": "1"}))
@@ -80,7 +82,9 @@ class SwidgetWebsocket:
                         break
 
                     elif message.type == aiohttp.WSMsgType.ERROR:
-                        _LOGGER.error(f"AIOHTTP websocket error. Message-type: {message.type} {message}")
+                        _LOGGER.error(
+                            f"AIOHTTP websocket error. Message-type: {message.type} {message}"
+                        )
                         break
 
         except aiohttp.ClientResponseError as error:
@@ -98,7 +102,9 @@ class SwidgetWebsocket:
             elif self.state != STATE_STOPPED:
                 retry_delay = min(2 ** (self.failed_attempts - 1) * 30, 300)
                 self.failed_attempts += 1
-                _LOGGER.exception(f"Websocket connection failed, retrying in {retry_delay}s: {error}")
+                _LOGGER.exception(
+                    f"Websocket connection failed, retrying in {retry_delay}s: {error}"
+                )
                 self.state = STATE_DISCONNECTED
                 await asyncio.sleep(retry_delay)
         except Exception as error:  # pylint: disable=broad-except
@@ -115,7 +121,7 @@ class SwidgetWebsocket:
     async def send_str(self, message):
         _LOGGER.error(f"Sending Message: {message}")
         message = str(message)
-        await self.ws_client.send_str(f'{message}')
+        await self.ws_client.send_str(f"{message}")
 
     async def listen(self):
         """Close the listening websocket."""

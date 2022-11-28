@@ -1,13 +1,11 @@
-from swidget.swidgetdevice import (
-    DeviceType,
-    SwidgetDevice
-)
+from swidget.swidgetdevice import DeviceType, SwidgetDevice
 
 
 class SwidgetSwitch(SwidgetDevice):
-
-    def __init__(self, host,  secret_key: str, ssl: bool, use_websockets: bool) -> None:
-        super().__init__(host=host, secret_key=secret_key, ssl=ssl, use_websockets=use_websockets)
+    def __init__(self, host, secret_key: str, ssl: bool, use_websockets: bool) -> None:
+        super().__init__(
+            host=host, secret_key=secret_key, ssl=ssl, use_websockets=use_websockets
+        )
         self._device_type = DeviceType.Switch
 
     async def current_consumption(self) -> float:
