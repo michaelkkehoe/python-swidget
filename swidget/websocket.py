@@ -1,7 +1,8 @@
+"""Module to made websocket connections."""
+
 import asyncio
 import json
 import logging
-from datetime import datetime
 
 import aiohttp
 
@@ -20,7 +21,7 @@ STATE_STOPPED = "stopped"
 
 
 class SwidgetWebsocket:
-    """A websocket connection to a Swidget Device"""
+    """A websocket connection to a Swidget Device."""
 
     # pylint: disable=too-many-instance-attributes
 
@@ -53,7 +54,7 @@ class SwidgetWebsocket:
 
     @staticmethod
     def _get_uri(host, secret_key):
-        """Generate the websocket URI"""
+        """Generate the websocket URI."""
         return f"wss://{host}/api/v1/sock?x-secret-key={secret_key}"
 
     async def running(self):
@@ -67,8 +68,8 @@ class SwidgetWebsocket:
             ) as self.ws_client:
                 self.state = STATE_CONNECTED
                 self.failed_attempts = 0
-                self.send_str(json.dumps({"type": "summary", "request_id": "1"}))
-                self.send_str(json.dumps({"type": "state", "request_id": "2"}))
+                await self.send_str(json.dumps({"type": "summary", "request_id": "1"}))
+                await self.send_str(json.dumps({"type": "state", "request_id": "2"}))
                 async for message in self.ws_client:
                     if self.state == STATE_STOPPED:
                         break
@@ -119,6 +120,7 @@ class SwidgetWebsocket:
                 await asyncio.sleep(5)
 
     async def send_str(self, message):
+        """Send a message over the websocket."""
         _LOGGER.error(f"Sending Message: {message}")
         message = str(message)
         await self.ws_client.send_str(f"{message}")

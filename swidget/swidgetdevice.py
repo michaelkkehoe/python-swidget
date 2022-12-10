@@ -1,8 +1,10 @@
+"""Base class that represents a Swidget smart device."""
+
 import json
 import logging
 import time
 from enum import Enum
-from typing import Dict, List, Set
+from typing import Dict, List
 
 from aiohttp import ClientSession, TCPConnector
 
@@ -24,6 +26,8 @@ class DeviceType(Enum):
 
 
 class SwidgetDevice:
+    """Base class that represents a Swidget smart device."""
+
     def __init__(self, host, secret_key, ssl=False, use_websockets=True):
         self.ip_address = host
         self.ssl = ssl
@@ -48,7 +52,7 @@ class SwidgetDevice:
             self._websocket.stop()
 
     async def message_callback(self, message):
-        """Entrypoint for a websocket callback"""
+        """Entrypoint for a websocket callback."""
         if message["request_id"] == "summary":
             await self.process_summary(message)
         elif (
@@ -59,7 +63,7 @@ class SwidgetDevice:
             await self.process_state(message)
 
     async def get_summary(self):
-        """Get a summary of the device over HTTP"""
+        """Get a summary of the device over HTTP."""
         async with self._session.get(
             url=f"https://{self.ip_address}/api/v1/summary", ssl=self.ssl
         ) as response:
@@ -67,7 +71,7 @@ class SwidgetDevice:
         await self.process_summary(summary)
 
     async def process_summary(self, summary):
-        """Process the data around the summary of the device"""
+        """Process the data around the summary of the device."""
         self.model = summary["model"]
         self.mac_address = summary["mac"]
         self.version = summary["version"]
@@ -81,7 +85,7 @@ class SwidgetDevice:
         self._last_update = int(time.time())
 
     async def get_state(self):
-        """Get the state of the device over HTTP"""
+        """Get the state of the device over HTTP."""
         async with self._session.get(
             url=f"https://{self.ip_address}/api/v1/state", ssl=self.ssl
         ) as response:
@@ -89,42 +93,44 @@ class SwidgetDevice:
         await self.process_state(state)
 
     async def process_state(self, state):
-        """Process any information about the state of the device or insert"""
+        """Process any information about the state of the device or insert."""
         _LOGGER.debug(f"Processing state: {state}")
         # State is not always in the state (during callback)
         try:
             self.rssi = state["connection"]["rssi"]
-        except:
+        except KeyError:
             pass
 
         for assembly in self.assemblies:
             for id, component in self.assemblies[assembly].components.items():
                 try:
                     component.functions.update(state[assembly]["components"][id])
-                except:
+                except Exception:
                     pass
         self._last_update = int(time.time())
 
     async def update(self):
+        """Update the state and summary of the device."""
         if self._last_update is None:
             _LOGGER.debug("Performing the initial update to obtain sysinfo")
         await self.get_summary()
         await self.get_state()
 
     async def send_config(self, payload: dict):
+        """Configure the swidget device."""
         data = json.dumps({"type": "config", "request_id": "abcd", "payload": payload})
         await self._websocket.send_str(data)
 
     async def send_command(
         self, assembly: str, component: str, function: str, command: dict
     ):
-        """Send a command to the Swidget device either using a HTTP call or the existing websocket"""
+        """Send a command to the Swidget device either using a HTTP call or the existing websocket."""
         data = {assembly: {"components": {component: {function: command}}}}
 
         if self.use_websockets:
             data = json.dumps(
                 {"type": "command", "request_id": "command", "payload": data}
-            )
+            )  # type: ignore
             _LOGGER.debug(f"About to send data: {data}")
             await self._websocket.send_str(data)
         else:
@@ -139,7 +145,7 @@ class SwidgetDevice:
             self.assemblies[assembly].components[component].functions[function] = function_value  # fmt: skip
 
     async def ping(self):
-        """Ping the device to ensure it's devices
+        """Ping the device to ensure it's devices.
 
         :raises SwidgetException: Raise the exception if there we are unable to connect to the Swidget device
         """
@@ -148,11 +154,11 @@ class SwidgetDevice:
                 url=f"https://{self.ip_address}/ping", ssl=self.ssl
             ) as response:
                 return response.text
-        except:
+        except Exception:
             raise SwidgetException
 
     async def blink(self):
-        """Make the device LED blink
+        """Make the device LED blink.
 
         :raises SwidgetException: Raise the exception if there we are unable to connect to the Swidget device
         """
@@ -162,7 +168,7 @@ class SwidgetDevice:
                 ssl=self.ssl,
             ) as response:
                 return response.text
-        except:
+        except Exception:
             raise SwidgetException
 
     @property
@@ -211,7 +217,7 @@ class SwidgetDevice:
 
     @property
     def realtime_values(self):
-        """Get a dict of realtime value attributes from the insert and host
+        """Get a dict of realtime value attributes from the insert and host.
 
         :return: A dictionary of insert sensor values and power consumption values
         :rtype: dict
@@ -232,7 +238,7 @@ class SwidgetDevice:
             return list(self.assemblies["host"].components["0"].functions.keys())
         except KeyError:
             _LOGGER.debug("Host does not have feature information")
-            return set()
+            return list()
 
     @property
     def insert_features(self) -> List[str]:
@@ -241,7 +247,7 @@ class SwidgetDevice:
             return list(self.assemblies["insert"].components.keys())
         except KeyError:
             _LOGGER.debug("Insert does not have feature information")
-            return set()
+            return list()
 
     def get_function_values(self, function: str):
         """Return the values of an insert function."""
@@ -258,7 +264,7 @@ class SwidgetDevice:
         return return_values
 
     def get_sensor_value(self, function, sensor):
-        """Return the value of a sensor given a function and sensor"""
+        """Return the value of a sensor given a function and sensor."""
         if sensor == "occupied":
             return (
                 self.assemblies["insert"]
@@ -277,7 +283,7 @@ class SwidgetDevice:
 
     @property
     def is_switch(self) -> bool:
-        """Return True if the device is a switch"""
+        """Return True if the device is a switch."""
         return (
             self.device_type == "switch"
             or self.device_type == "pana_switch"
@@ -286,12 +292,12 @@ class SwidgetDevice:
 
     @property
     def is_pana_switch(self) -> bool:
-        """Return True if the device is a pana_switch"""
+        """Return True if the device is a pana_switch."""
         return self.device_type == "pana_switch"
 
     @property
     def is_dimmer(self) -> bool:
-        """Return True if the device is a dimmer"""
+        """Return True if the device is a dimmer."""
         return self.device_type == "dimmer"
 
     @property
@@ -301,7 +307,7 @@ class SwidgetDevice:
 
     @property
     def friendly_name(self) -> str:
-        """Return a friendly description of the device"""
+        """Return a friendly description of the device."""
         return f"Swidget {self.device_type} w/{self.insert_type} insert"
 
     @property  # type: ignore
@@ -365,6 +371,8 @@ class SwidgetDevice:
 
 
 class SwidgetAssembly:
+    """Representation of the swidget host (dimmer/ switch/ outlet)."""
+
     def __init__(self, summary: dict):
         self.type = summary["type"]
         self.components = {
@@ -375,5 +383,7 @@ class SwidgetAssembly:
 
 
 class SwidgetComponent:
+    """Representation of the Swidget components."""
+
     def __init__(self, functions):
         self.functions = {f: None for f in functions}

@@ -1,9 +1,7 @@
 """python-swidget cli tool."""
-import asyncio
 import logging
 import sys
 from pprint import pformat as pf
-from typing import cast
 
 import asyncclick as click
 
@@ -15,6 +13,7 @@ from swidget import (
     SwidgetTimerSwitch,
     discover_devices,
     discover_single,
+    provision_wifi,
 )
 
 TYPE_TO_CLASS = {
@@ -42,6 +41,8 @@ pass_dev = click.make_pass_decorator(SwidgetDevice)
     envvar="SWIDGET_PASSWORD",
     required=False,
     help="The password of the device to connect to.",
+    prompt=True,
+    hide_input=True,
 )
 @click.option("-d", "--debug", envvar="SWIDGET_DEBUG", default=False, is_flag=True)
 @click.option(
@@ -95,12 +96,12 @@ def wifi(dev):
 @wifi.command()
 @click.argument("ssid")
 @click.option("--password", prompt=True, hide_input=True)
-@click.option("--keytype", default=3)
+@click.option("--keytype", prompt=True, hide_input=True)
 @pass_dev
-async def join(dev: SwidgetDevice, ssid, password, keytype):
+async def join(dev: SwidgetDevice, ssid, password, secret_key):
     """Join the given wifi network."""
     click.echo(f"Asking the device to connect to {ssid}..")
-    res = await dev.wifi_join(ssid, password, keytype=keytype)
+    res = await provision_wifi(ssid, password, secret_key=secret_key)
     click.echo(
         f"Response: {res} - if the device is not able to join the network, it will revert back to its previous state."
     )
@@ -173,11 +174,6 @@ async def state(dev: SwidgetDevice):
 @click.argument("command")
 async def raw_command(dev: SwidgetDevice, assembly, component, function, command):
     """Run a raw command on the device."""
-    import ast
-
-    if parameters is not None:
-        parameters = ast.literal_eval(parameters)
-
     res = await dev.send_command(assembly, component, function, command)
 
     click.echo(res)
@@ -203,8 +199,8 @@ async def brightness(dev: SwidgetDimmer, brightness: int):
 @cli.command()
 @pass_dev
 async def blink(dev):
-    """Set the device insert to blink"""
-    click.echo(f"Requesting the device to blink")
+    """Set the device insert to blink."""
+    click.echo("Requesting the device to blink")
     return await dev.blink()
 
 

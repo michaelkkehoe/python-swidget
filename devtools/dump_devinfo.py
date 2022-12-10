@@ -9,7 +9,6 @@ and finally execute a query to query all of them at once.
 
 import json
 import logging
-from collections import defaultdict, namedtuple
 
 import asyncclick as click
 from aiohttp import ClientSession, TCPConnector

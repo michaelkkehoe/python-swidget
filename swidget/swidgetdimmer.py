@@ -1,3 +1,5 @@
+"""Module to represent a Swidget dimmer."""
+
 import logging
 
 from swidget.exceptions import SwidgetException
@@ -7,11 +9,13 @@ log = logging.getLogger(__name__)
 
 
 class SwidgetDimmer(SwidgetDevice):
+    """Class to represent a Swidget dimmer device."""
+
     def __init__(self, host, secret_key: str, ssl: bool, use_websockets: bool) -> None:
         super().__init__(
             host=host, secret_key=secret_key, ssl=ssl, use_websockets=use_websockets
         )
-        self._device_type = "dimmer"
+        self._device_type = DeviceType.Dimmer
 
     @property  # type: ignore
     def brightness(self) -> int:
@@ -36,6 +40,7 @@ class SwidgetDimmer(SwidgetDevice):
         )
 
     async def set_default_brightness(self, brightness):
+        """Set the default brightness of the device."""
         await self.send_command(
             assembly="host",
             component="0",

@@ -21,6 +21,7 @@ anyio = "*"  # see https://github.com/python-trio/asyncclick/issues/18
 importlib-metadata = "*"
 asyncclick = ">=8"
 pydantic = "^1"
+requests = "2.28.1"
 ssdp = "1.1.1"
 
 # required only for docs

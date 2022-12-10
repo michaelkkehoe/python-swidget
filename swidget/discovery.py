@@ -1,13 +1,14 @@
+"""A module to manage the discovery of Swidget devices."""
+
 import asyncio
-import json
 import logging
 import socket
-from typing import Awaitable, Callable, Dict, Optional, Type, cast
+from typing import Type
 from urllib.parse import urlparse
 
 import ssdp
 
-from swidget.swidgetdevice import DeviceType, SwidgetDevice
+from swidget.swidgetdevice import SwidgetDevice
 
 from .exceptions import SwidgetException
 from .swidgetdimmer import SwidgetDimmer
@@ -22,6 +23,8 @@ devices = dict()
 
 
 class SwidgetDiscoveredDevice:
+    """A class to represent a Swidget discovered device."""
+
     def __init__(
         self, mac: str, host: str, friendly_name: str = "Swidget Discovered Device"
     ):
@@ -34,7 +37,7 @@ class SwidgetProtocol(ssdp.SimpleServiceDiscoveryProtocol):
     """Protocol to handle responses and requests."""
 
     def response_received(self, response: ssdp.SSDPResponse, addr: tuple):
-        "Handle an incoming response."
+        """Handle an incoming response."""
         headers = {h[0]: h[1] for h in response.headers}
         mac_address = headers["USN"].split("-")[-1]
         ip_address = urlparse(headers["LOCATION"]).hostname
@@ -48,6 +51,7 @@ class SwidgetProtocol(ssdp.SimpleServiceDiscoveryProtocol):
 
 
 async def discover_devices(timeout=RESPONSE_SEC):
+    """Discover Swidget devices by SSDP."""
     loop = asyncio.get_event_loop()
     transport, protocol = await loop.create_datagram_endpoint(
         SwidgetProtocol, family=socket.AF_INET
@@ -95,6 +99,7 @@ def _get_device_class(device_type: str) -> Type[SwidgetDevice]:
         return SwidgetSwitch
     elif device_type == "dimmer":
         return SwidgetDimmer
+
     elif device_type == "pana_switch":  # This is the timer switch
         return SwidgetTimerSwitch
     elif device_type == "relay_switch":

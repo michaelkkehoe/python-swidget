@@ -1,8 +1,11 @@
+"""Module to control a Swidget Timer Swidget (20/40/60) switch."""
 from swidget.swidgetdevice import DeviceType
 from swidget.swidgetswitch import SwidgetSwitch
 
 
 class SwidgetTimerSwitch(SwidgetSwitch):
+    """Class to control the SwidgetTimerSwitch."""
+
     def __init__(self, host, secret_key: str, ssl: bool, use_websockets: bool) -> None:
         super().__init__(
             host=host, secret_key=secret_key, ssl=ssl, use_websockets=use_websockets
